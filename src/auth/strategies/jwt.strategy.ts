@@ -2,8 +2,10 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Repository } from 'typeorm';
+import { RedisService } from '../../redis/redis.service';
 import { User } from '../../users/entities/user.entity';
 
 export interface JwtPayload {
@@ -18,6 +20,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         configService: ConfigService,
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
+        private readonly redisService: RedisService,
     ) {
         super({
             jwtFromRequest: ExtractJwt.fromExtractors([
@@ -26,10 +29,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             ]),
             ignoreExpiration: false,
             secretOrKey: configService.get<string>('JWT_SECRET', 'secret'),
+            passReqToCallback: true,
         });
     }
 
-    async validate(payload: JwtPayload): Promise<User> {
+    async validate(req: Request, payload: JwtPayload): Promise<User> {
+        const rawAuth = req.headers.authorization;
+        if (rawAuth) {
+            const token = rawAuth.replace(/^(Bearer|Token)\s+/i, '').trim();
+            const isBlacklisted = await this.redisService.isBlacklisted(token);
+            if (isBlacklisted) {
+                throw new UnauthorizedException();
+            }
+        }
+
         const user = await this.userRepository.findOne({ where: { id: payload.sub } });
         if (!user) {
             throw new UnauthorizedException();

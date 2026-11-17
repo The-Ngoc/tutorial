@@ -1,5 +1,17 @@
-import { Body, ClassSerializerInterceptor, Controller, HttpCode, HttpStatus, Post, UseInterceptors } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+    Body,
+    ClassSerializerInterceptor,
+    Controller,
+    Headers,
+    HttpCode,
+    HttpStatus,
+    Post,
+    UnauthorizedException,
+    UseGuards,
+    UseInterceptors,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserResponseSerializer } from '../users/serializers/user.serializer';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -24,5 +36,20 @@ export class AuthController {
     @ApiResponse({ status: 200, description: 'User logged in successfully.' })
     login(@Body() loginDto: LoginDto): Promise<UserResponseSerializer> {
         return this.authService.login(loginDto.user);
+    }
+
+    @Post('logout')
+    @HttpCode(HttpStatus.OK)
+    @UseGuards(AuthGuard('jwt'))
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Logout current user' })
+    @ApiResponse({ status: 200, description: 'User logged out successfully.' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async logout(@Headers('authorization') authHeader?: string): Promise<{ message: string }> {
+        if (!authHeader) {
+            throw new UnauthorizedException();
+        }
+        const token = authHeader.replace(/^(Bearer|Token)\s+/i, '').trim();
+        return this.authService.logout(token);
     }
 }
