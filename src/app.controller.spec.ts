@@ -15,8 +15,13 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello).toBe('Hello World!');
+    it('should return greeting from i18n', () => {
+      const mockI18n = {
+        t: jest.fn().mockReturnValue('Hello World!'),
+      };
+
+      expect(appController.getHello(mockI18n as any)).toBe('Hello World!');
+      expect(mockI18n.t).toHaveBeenCalledWith('common.HELLO');
     });
   });
 });
