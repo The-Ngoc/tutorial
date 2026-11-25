@@ -13,6 +13,11 @@ export class ListArticlesDto {
     @IsString()
     author?: string;
 
+    @ApiPropertyOptional({ description: 'Filter by favorited by username' })
+    @IsOptional()
+    @IsString()
+    favorited?: string;
+
     @ApiPropertyOptional({ description: 'Limit number of articles', default: 20 })
     @IsOptional()
     @Type(() => Number)

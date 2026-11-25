@@ -116,4 +116,32 @@ export class ArticlesController {
         await this.articlesService.deleteArticle(currentUser.id, slug);
         return { message: 'Article deleted successfully' };
     }
+
+    @Post(':slug/favorite')
+    @HttpCode(HttpStatus.OK)
+    @UseGuards(AuthGuard('jwt'))
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Favorite an article' })
+    @ApiResponse({ status: 200, description: 'Article favorited.' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async favoriteArticle(
+        @Param('slug') slug: string,
+        @CurrentUser() currentUser: User,
+    ): Promise<ArticleResponseSerializer> {
+        return this.articlesService.favoriteArticle(currentUser.id, slug);
+    }
+
+    @Delete(':slug/favorite')
+    @HttpCode(HttpStatus.OK)
+    @UseGuards(AuthGuard('jwt'))
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Unfavorite an article' })
+    @ApiResponse({ status: 200, description: 'Article unfavorited.' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async unfavoriteArticle(
+        @Param('slug') slug: string,
+        @CurrentUser() currentUser: User,
+    ): Promise<ArticleResponseSerializer> {
+        return this.articlesService.unfavoriteArticle(currentUser.id, slug);
+    }
 }

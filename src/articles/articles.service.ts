@@ -12,6 +12,7 @@ import { CreateArticleDto } from './dto/create-article.dto';
 import { ListArticlesDto } from './dto/list-articles.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 import { Article } from './entities/article.entity';
+import { Favorite } from './entities/favorite.entity';
 import { Tag } from './entities/tag.entity';
 import {
     ArticleResponseSerializer,
@@ -27,6 +28,8 @@ export class ArticlesService {
         private readonly articleRepository: Repository<Article>,
         @InjectRepository(Tag)
         private readonly tagRepository: Repository<Tag>,
+        @InjectRepository(Favorite)
+        private readonly favoriteRepository: Repository<Favorite>,
         @InjectRepository(Follow)
         private readonly followRepository: Repository<Follow>,
         @InjectRepository(User)
@@ -68,6 +71,18 @@ export class ArticlesService {
         article: Article,
         currentUserId?: number,
     ): Promise<SingleArticleDataSerializer> {
+        let favorited = false;
+        if (currentUserId) {
+            const fav = await this.favoriteRepository.findOne({
+                where: { userId: currentUserId, articleId: article.id },
+            });
+            favorited = !!fav;
+        }
+
+        const favoritesCount = await this.favoriteRepository.count({
+            where: { articleId: article.id },
+        });
+
         let following = false;
         if (currentUserId && article.author && currentUserId !== article.author.id) {
             const follow = await this.followRepository.findOne({
@@ -84,8 +99,8 @@ export class ArticlesService {
             tagList: article.tags ? article.tags.map((t) => t.name) : [],
             createdAt: article.createdAt,
             updatedAt: article.updatedAt,
-            favorited: false, // sẽ hoàn thiện ở bước Favorite
-            favoritesCount: 0, // sẽ hoàn thiện ở bước Favorite
+            favorited,
+            favoritesCount,
             author: new ProfileDataSerializer({
                 username: article.author?.username,
                 bio: article.author?.bio,
@@ -157,6 +172,13 @@ export class ArticlesService {
 
         if (query.author) {
             qb.andWhere('author.username = :author', { author: query.author });
+        }
+
+        if (query.favorited) {
+            qb.andWhere(
+                'article.id IN (SELECT f.article_id FROM favorites f JOIN users u ON u.id = f.user_id WHERE u.username = :favorited)',
+                { favorited: query.favorited },
+            );
         }
 
         const limit = query.limit || 20;
@@ -291,5 +313,65 @@ export class ArticlesService {
         }
 
         await this.articleRepository.remove(article);
+    }
+
+    async favoriteArticle(
+        userId: number,
+        slug: string,
+    ): Promise<ArticleResponseSerializer> {
+        const article = await this.articleRepository.findOne({
+            where: { slug },
+            relations: {
+                author: true,
+                tags: true,
+            },
+        });
+
+        if (!article) {
+            throw new NotFoundException('Article not found');
+        }
+
+        const existing = await this.favoriteRepository.findOne({
+            where: { userId, articleId: article.id },
+        });
+
+        if (!existing) {
+            const favorite = this.favoriteRepository.create({
+                userId,
+                articleId: article.id,
+            });
+            await this.favoriteRepository.save(favorite);
+        }
+
+        const data = await this.buildArticleData(article, userId);
+        return new ArticleResponseSerializer(data);
+    }
+
+    async unfavoriteArticle(
+        userId: number,
+        slug: string,
+    ): Promise<ArticleResponseSerializer> {
+        const article = await this.articleRepository.findOne({
+            where: { slug },
+            relations: {
+                author: true,
+                tags: true,
+            },
+        });
+
+        if (!article) {
+            throw new NotFoundException('Article not found');
+        }
+
+        const existing = await this.favoriteRepository.findOne({
+            where: { userId, articleId: article.id },
+        });
+
+        if (existing) {
+            await this.favoriteRepository.remove(existing);
+        }
+
+        const data = await this.buildArticleData(article, userId);
+        return new ArticleResponseSerializer(data);
     }
 }

@@ -7,10 +7,12 @@ import {
     JoinTable,
     ManyToMany,
     ManyToOne,
+    OneToMany,
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { Favorite } from './favorite.entity';
 import { Tag } from './tag.entity';
 
 @Entity('articles')
@@ -45,6 +47,9 @@ export class Article {
         inverseJoinColumn: { name: 'tag_id', referencedColumnName: 'id' },
     })
     tags: Tag[];
+
+    @OneToMany(() => Favorite, (favorite) => favorite.article)
+    favorites: Favorite[];
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
