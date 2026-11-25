@@ -12,6 +12,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { Comment } from './entities/comment.entity';
 import {
     CommentDataSerializer,
+    MultipleCommentsResponseSerializer,
     SingleCommentResponseSerializer,
 } from './serializers/comment.serializer';
 
@@ -63,5 +64,54 @@ export class CommentsService {
         });
 
         return new SingleCommentResponseSerializer(commentData);
+    }
+
+    async getComments(
+        currentUserId: number | null,
+        slug: string,
+    ): Promise<MultipleCommentsResponseSerializer> {
+        const article = await this.articleRepository.findOne({
+            where: { slug },
+        });
+
+        if (!article) {
+            throw new NotFoundException('Article not found');
+        }
+
+        const comments = await this.commentRepository.find({
+            where: { articleId: article.id },
+            relations: { author: true },
+            order: { createdAt: 'DESC' },
+        });
+
+        const commentData = await Promise.all(
+            comments.map(async (comment) => {
+                let following = false;
+                if (currentUserId) {
+                    const follow = await this.followRepository.findOne({
+                        where: {
+                            followerId: currentUserId,
+                            followingId: comment.author.id,
+                        },
+                    });
+                    following = !!follow;
+                }
+
+                return new CommentDataSerializer({
+                    id: comment.id,
+                    createdAt: comment.createdAt,
+                    updatedAt: comment.updatedAt,
+                    body: comment.body,
+                    author: new ProfileDataSerializer({
+                        username: comment.author.username,
+                        bio: comment.author.bio,
+                        image: comment.author.image,
+                        following,
+                    }),
+                });
+            }),
+        );
+
+        return new MultipleCommentsResponseSerializer(commentData);
     }
 }

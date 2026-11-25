@@ -32,3 +32,13 @@ export class SingleCommentResponseSerializer {
         this.comment = new CommentDataSerializer(data);
     }
 }
+
+export class MultipleCommentsResponseSerializer {
+    @Expose()
+    @Type(() => CommentDataSerializer)
+    comments: CommentDataSerializer[];
+
+    constructor(comments: CommentDataSerializer[]) {
+        this.comments = comments;
+    }
+}
