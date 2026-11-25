@@ -10,8 +10,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { dataSourceOptions } from './database/data-source';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AttachmentsModule } from './attachments/attachments.module';
 import { AuthModule } from './auth/auth.module';
 import { RedisModule } from './redis/redis.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { RedisModule } from './redis/redis.module';
     }),
     TypeOrmModule.forRoot(dataSourceOptions),
     RedisModule,
+    AttachmentsModule,
+    UsersModule,
     AuthModule,
   ],
   controllers: [AppController],
