@@ -1,3 +1,7 @@
 {
-    "HELLO": "Hello Wolrd!"
+    "HELLO": "Hello World!",
+    "LOGOUT_SUCCESS": "Logged out successfully",
+    "EMAIL_OR_USERNAME_EXISTS": "Email or username already exists",
+    "INVALID_CREDENTIALS": "Invalid email or password",
+    "TOKEN_REVOKED": "Session expired or token revoked"
 }
