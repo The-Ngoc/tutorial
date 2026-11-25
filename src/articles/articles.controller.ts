@@ -2,9 +2,13 @@ import {
     Body,
     ClassSerializerInterceptor,
     Controller,
+    Delete,
     Get,
+    HttpCode,
+    HttpStatus,
     Param,
     Post,
+    Put,
     Query,
     UseGuards,
     UseInterceptors,
@@ -17,6 +21,7 @@ import { User } from '../users/entities/user.entity';
 import { ArticlesService } from './articles.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { ListArticlesDto } from './dto/list-articles.dto';
+import { UpdateArticleDto } from './dto/update-article.dto';
 import {
     ArticleResponseSerializer,
     ArticlesResponseSerializer,
@@ -79,5 +84,36 @@ export class ArticlesController {
         @CurrentUser() currentUser?: User,
     ): Promise<ArticleResponseSerializer> {
         return this.articlesService.getArticle(slug, currentUser?.id);
+    }
+
+    @Put(':slug')
+    @UseGuards(AuthGuard('jwt'))
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Update an article (author only)' })
+    @ApiResponse({ status: 200, description: 'Article updated successfully.' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Forbidden - not author' })
+    async updateArticle(
+        @Param('slug') slug: string,
+        @CurrentUser() currentUser: User,
+        @Body() dto: UpdateArticleDto,
+    ): Promise<ArticleResponseSerializer> {
+        return this.articlesService.updateArticle(currentUser.id, slug, dto);
+    }
+
+    @Delete(':slug')
+    @HttpCode(HttpStatus.OK)
+    @UseGuards(AuthGuard('jwt'))
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Delete an article (author only)' })
+    @ApiResponse({ status: 200, description: 'Article deleted successfully.' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Forbidden - not author' })
+    async deleteArticle(
+        @Param('slug') slug: string,
+        @CurrentUser() currentUser: User,
+    ): Promise<{ message: string }> {
+        await this.articlesService.deleteArticle(currentUser.id, slug);
+        return { message: 'Article deleted successfully' };
     }
 }

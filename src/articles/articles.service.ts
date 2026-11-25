@@ -1,4 +1,5 @@
 import {
+    ForbiddenException,
     Injectable,
     NotFoundException,
 } from '@nestjs/common';
@@ -9,6 +10,7 @@ import { User } from '../users/entities/user.entity';
 import { ProfileDataSerializer } from '../users/serializers/profile.serializer';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { ListArticlesDto } from './dto/list-articles.dto';
+import { UpdateArticleDto } from './dto/update-article.dto';
 import { Article } from './entities/article.entity';
 import { Tag } from './entities/tag.entity';
 import {
@@ -233,5 +235,61 @@ export class ArticlesService {
         }
 
         return new ArticlesResponseSerializer(listData, count);
+    }
+
+    async updateArticle(
+        authorId: number,
+        slug: string,
+        dto: UpdateArticleDto,
+    ): Promise<ArticleResponseSerializer> {
+        const article = await this.articleRepository.findOne({
+            where: { slug },
+            relations: {
+                author: true,
+                tags: true,
+            },
+        });
+
+        if (!article) {
+            throw new NotFoundException('Article not found');
+        }
+
+        if (article.authorId !== authorId) {
+            throw new ForbiddenException('You are not allowed to update this article');
+        }
+
+        const updateData = dto.article;
+        if (updateData?.title && updateData.title !== article.title) {
+            article.title = updateData.title;
+            article.slug = this.generateSlug(updateData.title);
+        }
+
+        if (updateData?.description !== undefined) {
+            article.description = updateData.description;
+        }
+
+        if (updateData?.body !== undefined) {
+            article.body = updateData.body;
+        }
+
+        const updatedArticle = await this.articleRepository.save(article);
+        const data = await this.buildArticleData(updatedArticle, authorId);
+        return new ArticleResponseSerializer(data);
+    }
+
+    async deleteArticle(authorId: number, slug: string): Promise<void> {
+        const article = await this.articleRepository.findOne({
+            where: { slug },
+        });
+
+        if (!article) {
+            throw new NotFoundException('Article not found');
+        }
+
+        if (article.authorId !== authorId) {
+            throw new ForbiddenException('You are not allowed to delete this article');
+        }
+
+        await this.articleRepository.remove(article);
     }
 }
