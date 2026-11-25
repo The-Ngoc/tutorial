@@ -2,8 +2,12 @@ import {
     Body,
     ClassSerializerInterceptor,
     Controller,
+    Delete,
     Get,
+    HttpCode,
+    HttpStatus,
     Param,
+    ParseIntPipe,
     Post,
     UseGuards,
     UseInterceptors,
@@ -51,5 +55,22 @@ export class CommentsController {
         @CurrentUser() currentUser: User | null,
     ): Promise<MultipleCommentsResponseSerializer> {
         return this.commentsService.getComments(currentUser?.id ?? null, slug);
+    }
+
+    @Delete(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @UseGuards(AuthGuard('jwt'))
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Delete a comment from an article' })
+    @ApiResponse({ status: 204, description: 'Comment deleted successfully.' })
+    @ApiResponse({ status: 401, description: 'Unauthorized.' })
+    @ApiResponse({ status: 403, description: 'Forbidden. Not the comment author.' })
+    @ApiResponse({ status: 404, description: 'Article or comment not found.' })
+    async deleteComment(
+        @Param('slug') slug: string,
+        @Param('id', ParseIntPipe) id: number,
+        @CurrentUser() currentUser: User,
+    ): Promise<void> {
+        return this.commentsService.deleteComment(currentUser.id, slug, id);
     }
 }

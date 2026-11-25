@@ -1,4 +1,5 @@
 import {
+    ForbiddenException,
     Injectable,
     NotFoundException,
 } from '@nestjs/common';
@@ -113,5 +114,33 @@ export class CommentsService {
         );
 
         return new MultipleCommentsResponseSerializer(commentData);
+    }
+
+    async deleteComment(
+        currentUserId: number,
+        slug: string,
+        commentId: number,
+    ): Promise<void> {
+        const article = await this.articleRepository.findOne({
+            where: { slug },
+        });
+
+        if (!article) {
+            throw new NotFoundException('Article not found');
+        }
+
+        const comment = await this.commentRepository.findOne({
+            where: { id: commentId, articleId: article.id },
+        });
+
+        if (!comment) {
+            throw new NotFoundException('Comment not found');
+        }
+
+        if (comment.authorId !== currentUserId) {
+            throw new ForbiddenException('You are not the author of this comment');
+        }
+
+        await this.commentRepository.delete(commentId);
     }
 }
