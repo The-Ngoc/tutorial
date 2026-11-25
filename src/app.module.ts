@@ -13,6 +13,7 @@ import { AppService } from './app.service';
 import { ArticlesModule } from './articles/articles.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { AuthModule } from './auth/auth.module';
+import { CommentsModule } from './comments/comments.module';
 import { RedisModule } from './redis/redis.module';
 import { UsersModule } from './users/users.module';
 
@@ -37,6 +38,7 @@ import { UsersModule } from './users/users.module';
     AttachmentsModule,
     UsersModule,
     ArticlesModule,
+    CommentsModule,
     AuthModule,
   ],
   controllers: [AppController],
